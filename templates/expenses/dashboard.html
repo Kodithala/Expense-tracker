@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Financial Dashboard{% endblock %}
+{% block page_heading %}Financial Dashboard{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards Grid -->
+<div class="stats-grid">
+    <div class="stat-card income">
+        <div class="stat-info">
+            <span class="stat-label">Total Income</span>
+            <span class="stat-value">₹{{ total_income|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+        </div>
+    </div>
+
+    <div class="stat-card expense">
+        <div class="stat-info">
+            <span class="stat-label">Total Expenses</span>
+            <span class="stat-value">₹{{ total_expenses|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-arrow-trend-down"></i>
+        </div>
+    </div>
+
+    <div class="stat-card balance">
+        <div class="stat-info">
+            <span class="stat-label">Current Balance</span>
+            <span class="stat-value">₹{{ current_balance|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-wallet"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Visualizations / Charts Grid -->
+<div class="charts-grid">
+    <!-- Monthly Trend Bar Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-column"></i>
+                <span>Monthly Cash Flow Trend</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Category Pie Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Category Breakdown</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="categoryPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Recent Transactions</span>
+        </h3>
+        <a href="{% url 'transactions' %}" class="btn btn-secondary btn-sm">
+            <span>View All</span>
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if recent_transactions %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in recent_transactions %}
+                    <tr>
+                        <td>
+                            {% if tx.transaction_type == 'INCOME' %}
+                            <span class="badge badge-income">
+                                <i class="fa-solid fa-arrow-up"></i> Income
+                            </span>
+                            {% else %}
+                            <span class="badge badge-expense">
+                                <i class="fa-solid fa-arrow-down"></i> Expense
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-category">{{ tx.category }}</span>
+                        </td>
+                        <td style="color: var(--text-main); font-weight: 500;">{{ tx.description|default:"-" }}</td>
+                        <td style="color: var(--text-muted);">{{ tx.date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if tx.transaction_type == 'INCOME' %}
+                            <span class="amount-income">+₹{{ tx.amount|floatformat:2 }}</span>
+                            {% else %}
+                            <span class="amount-expense">-₹{{ tx.amount|floatformat:2 }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{% url 'edit_transaction' tx.id %}" class="btn btn-secondary btn-sm" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                            <a href="{% url 'delete_transaction' tx.id %}" class="btn btn-danger btn-sm" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-receipt"></i>
+            <h3>No Transactions Recorded Yet</h3>
+            <p>Start tracking your income and expenses by adding your first transaction.</p>
+            <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm" style="margin-top: 18px;">
+                <i class="fa-solid fa-plus"></i> Add Transaction
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Django json_script tags -->
+{{ pie_labels|json_script:"pie-labels-data" }}
+{{ pie_data|json_script:"pie-data-data" }}
+{{ monthly_labels|json_script:"monthly-labels-data" }}
+{{ monthly_income|json_script:"monthly-income-data" }}
+{{ monthly_expense|json_script:"monthly-expense-data" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const pieLabels = JSON.parse(document.getElementById('pie-labels-data').textContent);
+        const pieData = JSON.parse(document.getElementById('pie-data-data').textContent);
+        const monthlyLabels = JSON.parse(document.getElementById('monthly-labels-data').textContent);
+        const monthlyIncome = JSON.parse(document.getElementById('monthly-income-data').textContent);
+        const monthlyExpense = JSON.parse(document.getElementById('monthly-expense-data').textContent);
+
+        // Light theme options for Chart.js
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+        // Render Category Pie Chart
+        const ctxPie = document.getElementById('categoryPieChart').getContext('2d');
+        if (pieData && pieData.length > 0) {
+            new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: pieLabels,
+                    datasets: [{
+                        data: pieData,
+                        backgroundColor: [
+                            '#4f46e5', '#10b981', '#f59e0b', '#f43f5e',
+                            '#8b5cf6', '#06b6d4', '#ec4899', '#3b82f6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#475569',
+                                boxWidth: 12,
+                                padding: 14,
+                                font: { size: 12, weight: '600' }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            ctxPie.font = "14px 'Plus Jakarta Sans'";
+            ctxPie.fillStyle = "#94a3b8";
+            ctxPie.textAlign = "center";
+            ctxPie.fillText("No expense data available", ctxPie.canvas.width / 2, ctxPie.canvas.height / 2);
+        }
+
+        // Render Monthly Cash Flow Bar Chart
+        const ctxBar = document.getElementById('monthlyTrendChart').getContext('2d');
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: monthlyLabels,
+                datasets: [
+                    {
+                        label: 'Income (₹)',
+                        data: monthlyIncome,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    },
+                    {
+                        label: 'Expenses (₹)',
+                        data: monthlyExpense,
+                        backgroundColor: '#f43f5e',
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: '#475569', font: { weight: '600' } }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { color: '#64748b' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#64748b' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

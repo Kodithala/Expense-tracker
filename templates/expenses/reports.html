@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}Financial Reports & Analytics{% endblock %}
+{% block page_heading %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<!-- Month & Year Navigation Header -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-chart-line" style="font-size: 24px; color: var(--primary);"></i>
+            <div>
+                <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main);">Monthly Summary for {{ month_name }}</h2>
+                <p style="font-size: 13px; color: var(--text-dim);">Analyze category spending and income vs expense trends</p>
+            </div>
+        </div>
+
+        <form method="GET" action="{% url 'reports' %}" style="display: flex; gap: 8px;">
+            <select name="month" class="form-select" onchange="this.form.submit()">
+                {% for m_val, m_name in months_list %}
+                <option value="{{ m_val }}" {% if m_val == selected_month %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                {% for y_val in years_list %}
+                <option value="{{ y_val }}" {% if y_val == selected_year %}selected{% endif %}>{{ y_val }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Monthly Financial Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card income">
+        <div class="stat-info">
+            <span class="stat-label">Monthly Income</span>
+            <span class="stat-value">₹{{ monthly_income|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+        </div>
+    </div>
+
+    <div class="stat-card expense">
+        <div class="stat-info">
+            <span class="stat-label">Monthly Expenses</span>
+            <span class="stat-value">₹{{ monthly_expense|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-arrow-trend-down"></i>
+        </div>
+    </div>
+
+    <div class="stat-card balance">
+        <div class="stat-info">
+            <span class="stat-label">Monthly Net Balance</span>
+            <span class="stat-value">₹{{ monthly_balance|floatformat:2 }}</span>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="charts-grid">
+    <!-- 12-Month Historical Bar Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-column"></i>
+                <span>12-Month Financial Trend</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Pie Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Category Allocation</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Breakdown Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Category Spending Breakdown ({{ month_name }})</span>
+        </h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if categories_data %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Total Amount Spent</th>
+                        <th>Percentage of Monthly Expenses</th>
+                        <th>Visual Distribution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in categories_data %}
+                    <tr>
+                        <td>
+                            <span class="badge badge-category" style="font-size: 13px;">{{ c.category }}</span>
+                        </td>
+                        <td><strong style="color: var(--text-main); font-family: var(--font-mono);">₹{{ c.amount|floatformat:2 }}</strong></td>
+                        <td style="color: var(--text-muted);">{{ c.percentage }}%</td>
+                        <td style="width: 30%;">
+                            <div class="progress-bar-container" style="height: 8px;">
+                                <div class="progress-bar-fill bg-success" data-pct="{{ c.percentage }}"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-chart-pie"></i>
+            <h3>No Expenses Recorded For {{ month_name }}</h3>
+            <p>Select a different month or add transactions to generate detailed report breakdowns.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Django json_script tags -->
+{{ pie_labels|json_script:"pie-labels-reports" }}
+{{ pie_values|json_script:"pie-values-reports" }}
+{{ trend_labels|json_script:"trend-labels-reports" }}
+{{ trend_income|json_script:"trend-income-reports" }}
+{{ trend_expense|json_script:"trend-expense-reports" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const pieLabels = JSON.parse(document.getElementById('pie-labels-reports').textContent);
+        const pieValues = JSON.parse(document.getElementById('pie-values-reports').textContent);
+        const trendLabels = JSON.parse(document.getElementById('trend-labels-reports').textContent);
+        const trendIncome = JSON.parse(document.getElementById('trend-income-reports').textContent);
+        const trendExpense = JSON.parse(document.getElementById('trend-expense-reports').textContent);
+
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+        // Render Category Allocation Pie Chart
+        const ctxPie = document.getElementById('pieChart').getContext('2d');
+        if (pieValues && pieValues.length > 0) {
+            new Chart(ctxPie, {
+                type: 'pie',
+                data: {
+                    labels: pieLabels,
+                    datasets: [{
+                        data: pieValues,
+                        backgroundColor: [
+                            '#4f46e5', '#10b981', '#f59e0b', '#f43f5e',
+                            '#8b5cf6', '#06b6d4', '#ec4899', '#3b82f6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#475569' } }
+                    }
+                }
+            });
+        } else {
+            ctxPie.font = "14px 'Plus Jakarta Sans'";
+            ctxPie.fillStyle = "#94a3b8";
+            ctxPie.textAlign = "center";
+            ctxPie.fillText("No category data available", ctxPie.canvas.width / 2, ctxPie.canvas.height / 2);
+        }
+
+        // Render 12-Month Trend Bar Chart
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        label: 'Income (₹)',
+                        data: trendIncome,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Expense (₹)',
+                        data: trendExpense,
+                        backgroundColor: '#f43f5e',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { color: '#475569' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b' } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

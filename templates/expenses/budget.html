@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Budget Management{% endblock %}
+{% block page_heading %}Budget Management{% endblock %}
+
+{% block content %}
+<!-- Month Selector & Set Budget Form -->
+<div class="charts-grid" style="grid-template-columns: 1fr 1.5fr;">
+    <!-- Set Budget Form Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Set Category Budget</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{% url 'budget' %}?month={{ selected_month }}&year={{ selected_year }}">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <div class="form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>{{ form.category.errors.0 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.monthly_budget.id_for_label }}">Monthly Budget Limit (₹)</label>
+                    {{ form.monthly_budget }}
+                    {% if form.monthly_budget.errors %}
+                    <div class="form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>{{ form.monthly_budget.errors.0 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1;" class="form-group">
+                        <label class="form-label" for="{{ form.month.id_for_label }}">Month</label>
+                        {{ form.month }}
+                    </div>
+                    <div style="flex: 1;" class="form-group">
+                        <label class="form-label" for="{{ form.year.id_for_label }}">Year</label>
+                        {{ form.year }}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fa-solid fa-save"></i> Save Budget
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Overall Budget Summary Header Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Budget Overview - {{ month_name }}</span>
+            </h3>
+            <!-- Filter Month/Year -->
+            <form method="GET" action="{% url 'budget' %}" style="display: flex; gap: 8px;">
+                <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for m_val, m_name in months_list %}
+                    <option value="{{ m_val }}" {% if m_val == selected_month %}selected{% endif %}>{{ m_name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for y_val in years_list %}
+                    <option value="{{ y_val }}" {% if y_val == selected_year %}selected{% endif %}>{{ y_val }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="card-body">
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 0;">
+                <div style="background-color: var(--slate-50); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+                    <div style="font-size: 12px; color: var(--slate-500); font-weight: 600;">Total Budget</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--primary);">₹{{ total_budget_amount|floatformat:2 }}</div>
+                </div>
+
+                <div style="background-color: var(--slate-50); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+                    <div style="font-size: 12px; color: var(--slate-500); font-weight: 600;">Total Spent</div>
+                    <div style="font-size: 20px; font-weight: 800; color: var(--danger);">₹{{ total_spent_amount|floatformat:2 }}</div>
+                </div>
+
+                <div style="background-color: var(--slate-50); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+                    <div style="font-size: 12px; color: var(--slate-500); font-weight: 600;">Remaining</div>
+                    <div class="{% if total_remaining >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 20px; font-weight: 800;">
+                        ₹{{ total_remaining|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Category Budgets Grid -->
+<div style="margin-top: 32px;">
+    <h3 style="font-size: 18px; font-weight: 700; color: var(--slate-900); margin-bottom: 16px;">
+        Category Spending Progress
+    </h3>
+
+    {% if budget_cards %}
+    <div class="budget-grid">
+        {% for b in budget_cards %}
+        <div class="budget-card">
+            <div class="budget-header">
+                <span class="budget-category-title">
+                    <i class="fa-solid fa-tag" style="color: var(--primary);"></i>
+                    {{ b.category }}
+                </span>
+                <span class="badge badge-{% if b.status_color == 'success' %}income{% elif b.status_color == 'danger' %}expense{% else %}category{% endif %}">
+                    {{ b.raw_percentage }}% Used
+                </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill bg-{{ b.status_color }}" data-pct="{{ b.percentage }}"></div>
+            </div>
+
+            <div class="budget-meta">
+                <div>Spent: <strong>₹{{ b.spent|floatformat:2 }}</strong></div>
+                <div>Budget: <strong>₹{{ b.monthly_budget|floatformat:2 }}</strong></div>
+            </div>
+
+            <!-- Warning Notice Alert -->
+            {% if b.warning_level != 'normal' %}
+            <div class="alert alert-{% if b.warning_level == 'exceeded' %}danger{% elif b.warning_level == 'critical' %}danger{% else %}warning{% endif %}" style="padding: 8px 12px; font-size: 12px; margin: 0;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>{{ b.warning_msg }}</span>
+            </div>
+            {% else %}
+            <div style="font-size: 12px; color: var(--slate-500); display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <span>Remaining: ₹{{ b.remaining|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <i class="fa-solid fa-calculator"></i>
+            <h3>No Budgets Set For {{ month_name }}</h3>
+            <p>Use the form above to define your category spending limits for this month.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Transaction{% endblock %}
+{% block page_heading %}Confirm Deletion{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <div class="card-header" style="background-color: var(--danger-light); border-bottom-color: rgba(244,63,94,0.2);">
+        <h3 class="card-title" style="color: var(--danger-hover);">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Delete Transaction Confirmation</span>
+        </h3>
+    </div>
+    <div class="card-body">
+        <p style="font-size: 16px; margin-bottom: 20px; color: var(--slate-700);">
+            Are you sure you want to permanently delete this transaction? This action cannot be undone.
+        </p>
+
+        <div style="background-color: var(--slate-50); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--slate-200); margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-weight: 600; color: var(--slate-500);">Type:</span>
+                <span>
+                    {% if transaction.transaction_type == 'INCOME' %}
+                    <span class="badge badge-income">Income</span>
+                    {% else %}
+                    <span class="badge badge-expense">Expense</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-weight: 600; color: var(--slate-500);">Amount:</span>
+                <span style="font-weight: 700; font-size: 16px;">₹{{ transaction.amount|floatformat:2 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-weight: 600; color: var(--slate-500);">Category:</span>
+                <span class="badge badge-category">{{ transaction.category }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-weight: 600; color: var(--slate-500);">Description:</span>
+                <span>{{ transaction.description|default:"None" }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-weight: 600; color: var(--slate-500);">Date:</span>
+                <span>{{ transaction.date|date:"M d, Y" }}</span>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'delete_transaction' transaction.id %}">
+            {% csrf_token %}
+            <div style="display: flex; gap: 12px;">
+                <button type="submit" class="btn btn-danger" style="flex: 1;">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Yes, Delete Transaction</span>
+                </button>
+                <a href="{% url 'transactions' %}" class="btn btn-secondary">
+                    <span>Cancel</span>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

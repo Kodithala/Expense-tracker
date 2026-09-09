@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Transaction{% endblock %}
+{% block page_heading %}Edit Transaction{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Update Transaction #{{ transaction.id }}</span>
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% url 'edit_transaction' transaction.id %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.transaction_type.id_for_label }}">Transaction Type</label>
+                {{ form.transaction_type }}
+                {% if form.transaction_type.errors %}
+                <div class="form-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ form.transaction_type.errors.0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.amount.id_for_label }}">Amount (₹)</label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                <div class="form-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ form.amount.errors.0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <div class="form-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ form.category.errors.0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description (Optional)</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <div class="form-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ form.description.errors.0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ form.date.id_for_label }}">Date</label>
+                {{ form.date }}
+                {% if form.date.errors %}
+                <div class="form-error">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ form.date.errors.0 }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Update Changes</span>
+                </button>
+                <a href="{% url 'transactions' %}" class="btn btn-secondary">
+                    <span>Cancel</span>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

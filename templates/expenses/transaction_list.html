@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Transactions History{% endblock %}
+{% block page_heading %}Transaction History{% endblock %}
+
+{% block content %}
+<!-- Search & Filters Bar -->
+<div class="filter-card">
+    <form method="GET" action="{% url 'transactions' %}">
+        <div class="filter-grid">
+            <div>
+                <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Search Keyword</label>
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search description or category...">
+            </div>
+
+            <div>
+                <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Type</label>
+                <select name="tx_type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="INCOME" {% if tx_type == 'INCOME' %}selected{% endif %}>Income</option>
+                    <option value="EXPENSE" {% if tx_type == 'EXPENSE' %}selected{% endif %}>Expense</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for cat in all_categories %}
+                    <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <div style="flex: 1;">
+                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">From</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+                </div>
+                <div style="flex: 1;">
+                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">To</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" title="Apply Filters">
+                    <i class="fa-solid fa-filter"></i> Filter
+                </button>
+                {% if q or tx_type or category or start_date or end_date %}
+                <a href="{% url 'transactions' %}" class="btn btn-secondary" title="Clear Filters">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Transactions Table Card -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fa-solid fa-list-check"></i>
+            <span>All Transactions</span>
+        </h3>
+        <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Add Transaction
+        </a>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in page_obj %}
+                    <tr>
+                        <td>
+                            {% if tx.transaction_type == 'INCOME' %}
+                            <span class="badge badge-income">
+                                <i class="fa-solid fa-arrow-up"></i> Income
+                            </span>
+                            {% else %}
+                            <span class="badge badge-expense">
+                                <i class="fa-solid fa-arrow-down"></i> Expense
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-category">{{ tx.category }}</span>
+                        </td>
+                        <td>{{ tx.description|default:"-" }}</td>
+                        <td>{{ tx.date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if tx.transaction_type == 'INCOME' %}
+                            <span class="amount-income">+₹{{ tx.amount|floatformat:2 }}</span>
+                            {% else %}
+                            <span class="amount-expense">-₹{{ tx.amount|floatformat:2 }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{% url 'edit_transaction' tx.id %}" class="btn btn-secondary btn-sm" title="Edit">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </a>
+                            <a href="{% url 'delete_transaction' tx.id %}" class="btn btn-danger btn-sm" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-container">
+            <div style="font-size: 14px; color: var(--slate-500);">
+                Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} total records)
+            </div>
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                <div class="page-item">
+                    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&tx_type={{ tx_type }}&category={{ category }}&start_date={{ start_date }}&end_date={{ end_date }}" class="page-link">
+                        <i class="fa-solid fa-chevron-left"></i> Previous
+                    </a>
+                </div>
+                {% endif %}
+
+                {% for p in page_obj.paginator.page_range %}
+                    {% if page_obj.number == p %}
+                    <div class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </div>
+                    {% elif p > page_obj.number|add:"-3" and p < page_obj.number|add:"3" %}
+                    <div class="page-item">
+                        <a href="?page={{ p }}&q={{ q }}&tx_type={{ tx_type }}&category={{ category }}&start_date={{ start_date }}&end_date={{ end_date }}" class="page-link">{{ p }}</a>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <div class="page-item">
+                    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&tx_type={{ tx_type }}&category={{ category }}&start_date={{ start_date }}&end_date={{ end_date }}" class="page-link">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-folder-open"></i>
+            <h3>No Transactions Found</h3>
+            <p>Try adjusting your search criteria or add a new transaction.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
