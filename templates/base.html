@@ -43,6 +43,10 @@
                     <i class="fa-solid fa-receipt"></i>
                     <span>Transactions</span>
                 </a>
+                <a href="{% url 'profile' %}" class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>My Profile</span>
+                </a>
 
                 <div class="nav-section-title">Analytics & Planning</div>
                 <a href="{% url 'budget' %}" class="nav-link {% if request.resolver_match.url_name == 'budget' %}active{% endif %}">
@@ -56,16 +60,19 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile-badge">
+                <a href="{% url 'profile' %}" class="user-profile-badge" style="text-decoration: none; color: inherit;">
                     <div class="avatar">
                         {{ user.username|slice:":1"|upper }}
                     </div>
                     <div class="user-info">
                         <div class="user-name">{{ user.username }}</div>
-                        <div class="user-role">{{ user.email|default:"Personal Account" }}</div>
+                        <div class="user-role">{{ user.email|default:"View Details" }}</div>
                     </div>
-                    <a href="{% url 'logout' %}" class="btn-icon" title="Logout" style="color: var(--slate-400);">
+                </a>
+                <div style="margin-top: 10px; display: flex; width: 100%;">
+                    <a href="{% url 'logout' %}" class="btn btn-sm" style="width: 100%; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: center; font-weight: 600;">
                         <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
                     </a>
                 </div>
             </div>
@@ -82,10 +89,18 @@
                     <h1 class="page-title">{% block page_heading %}Dashboard{% endblock %}</h1>
                 </div>
 
-                <div class="header-actions">
+                <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
+                    <a href="{% url 'profile' %}" class="btn btn-secondary btn-sm" title="My Account">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
                     <a href="{% url 'add_transaction' %}" class="btn btn-primary btn-sm">
                         <i class="fa-solid fa-plus"></i>
                         <span>New Transaction</span>
+                    </a>
+                    <a href="{% url 'logout' %}" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);" title="Sign out of your account">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
                     </a>
                 </div>
             </header>

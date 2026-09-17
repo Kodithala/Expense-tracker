@@ -10,3 +10,4 @@ python manage.py create_admin_user
 
 echo "==> Starting Gunicorn web server..."
 exec gunicorn config.wsgi:application
+

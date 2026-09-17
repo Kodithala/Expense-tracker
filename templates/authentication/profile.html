@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Profile & Account Details{% endblock %}
+{% block page_heading %}My Profile Details{% endblock %}
+
+{% block content %}
+<div class="profile-container" style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 900px; margin: 0 auto;">
+    
+    <!-- User Overview Card -->
+    <div class="card" style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); padding: 1.75rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--slate-800);">
+                        {{ profile_user.get_full_name|default:profile_user.username }}
+                    </h2>
+                    <p style="margin: 4px 0 0 0; color: var(--slate-500); font-size: 0.925rem;">
+                        <i class="fa-regular fa-envelope" style="margin-right: 6px;"></i>{{ profile_user.email|default:"No email registered" }}
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: #6366f1; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                            <i class="fa-solid fa-database" style="margin-right: 4px;"></i> {{ db_engine }} DB
+                        </span>
+                        {% if profile_user.is_superuser %}
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                            Superuser / Admin
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                            Standard User
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logout Button in Profile Card -->
+            <div>
+                <a href="{% url 'logout' %}" class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Account Statistics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <div class="card" style="background: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div style="color: var(--slate-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Account ID</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--slate-800); margin-top: 6px;">#{{ profile_user.id }}</div>
+        </div>
+        <div class="card" style="background: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div style="color: var(--slate-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Transactions</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--slate-800); margin-top: 6px;">{{ total_tx_count }}</div>
+        </div>
+        <div class="card" style="background: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div style="color: var(--slate-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Current Balance</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: {{ balance_color }}; margin-top: 6px;">₹{{ current_balance }}</div>
+        </div>
+        <div class="card" style="background: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div style="color: var(--slate-500); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Member Since</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--slate-800); margin-top: 6px;">{{ profile_user.date_joined|date:"M d, Y" }}</div>
+        </div>
+    </div>
+
+    <!-- Database Info & Edit Profile Form Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; flex-wrap: wrap;">
+        
+        <!-- Database Storage Details -->
+        <div class="card" style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); padding: 1.5rem;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; font-weight: 700; color: var(--slate-800); border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <i class="fa-solid fa-server" style="color: #6366f1; margin-right: 8px;"></i> Database Record Info
+            </h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; font-size: 0.925rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <span style="color: var(--slate-500);">Database Backend</span>
+                    <span style="font-weight: 600; color: var(--slate-800);">{{ db_engine }} Engine</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <span style="color: var(--slate-500);">Database Name</span>
+                    <span style="font-weight: 600; color: var(--slate-800);">{{ db_name }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <span style="color: var(--slate-500);">Database Table</span>
+                    <span style="font-weight: 600; color: var(--slate-800);"><code>auth_user</code></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <span style="color: var(--slate-500);">Username</span>
+                    <span style="font-weight: 600; color: var(--slate-800);">{{ profile_user.username }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <span style="color: var(--slate-500);">Last Login</span>
+                    <span style="font-weight: 600; color: var(--slate-800);">{{ profile_user.last_login|default:"Never" }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--slate-500);">Account Active</span>
+                    <span style="font-weight: 600; color: #10b981;">Yes</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Form -->
+        <div class="card" style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); padding: 1.5rem;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; font-weight: 700; color: var(--slate-800); border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <i class="fa-solid fa-user-pen" style="color: #6366f1; margin-right: 8px;"></i> Edit Details
+            </h3>
+
+            <form method="POST" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.875rem; color: var(--slate-700); margin-bottom: 6px; display: block;">Username</label>
+                    <input type="text" class="form-control" value="{{ profile_user.username }}" disabled style="background: var(--slate-100, #f1f5f9); cursor: not-allowed;">
+                    <small style="color: var(--slate-500); font-size: 0.75rem;">Username cannot be changed once created.</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 600; font-size: 0.875rem; color: var(--slate-700); margin-bottom: 6px; display: block;">Email Address</label>
+                    <input type="email" name="email" class="form-control" value="{{ profile_user.email }}" placeholder="enter your email address">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; font-size: 0.875rem; color: var(--slate-700); margin-bottom: 6px; display: block;">First Name</label>
+                        <input type="text" name="first_name" class="form-control" value="{{ profile_user.first_name }}" placeholder="First name">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; font-size: 0.875rem; color: var(--slate-700); margin-bottom: 6px; display: block;">Last Name</label>
+                        <input type="text" name="last_name" class="form-control" value="{{ profile_user.last_name }}" placeholder="Last name">
+                    </div>
+                </div>
+
+                <div style="margin-top: 0.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.5rem; font-weight: 600;">
+                        <i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

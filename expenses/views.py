@@ -8,6 +8,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.core.paginator import Paginator
+from django.conf import settings
+
 
 from .models import (
     Transaction, Budget,
@@ -88,11 +90,63 @@ def login_view(request):
 
 def logout_view(request):
     """
-    User logout view.
+    User logout view supporting GET and POST requests.
+    Clears the session, adds a success flash notification, and redirects to the login page.
     """
-    logout(request)
-    messages.info(request, "You have been logged out successfully.")
+    if request.user.is_authenticated:
+        username = getattr(request.user, 'username', str(request.user))
+        logout(request)
+        messages.success(request, f"You have been logged out successfully. See you soon, {username}!")
+    else:
+        messages.info(request, "You are currently not logged in.")
     return redirect('login')
+
+
+@login_required
+def profile_view(request):
+    """
+    User Profile / Account Details view.
+    Displays user details stored in the MySQL database (auth_user table)
+    and allows updating profile information.
+    """
+    user = request.user
+    user_txs = Transaction.objects.filter(user=user)
+
+    total_tx_count = user_txs.count()
+    total_income = user_txs.filter(transaction_type='INCOME').aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+    total_expenses = user_txs.filter(transaction_type='EXPENSE').aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+    current_balance = total_income - total_expenses
+    balance_color = '#10b981' if current_balance >= 0 else '#ef4444'
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+
+        setattr(user, 'email', email)
+        setattr(user, 'first_name', first_name)
+        setattr(user, 'last_name', last_name)
+        user.save()
+
+        messages.success(request, "Your account details have been updated successfully in the MySQL database.")
+        return redirect('profile')
+
+    db_engine = settings.DATABASES['default']['ENGINE'].split('.')[-1].upper()
+
+    context = {
+        'profile_user': user,
+        'total_tx_count': total_tx_count,
+        'total_income': total_income,
+        'total_expenses': total_expenses,
+        'current_balance': current_balance,
+        'balance_color': balance_color,
+        'db_engine': db_engine,
+        'db_name': settings.DATABASES['default'].get('NAME', 'expense_tracker'),
+    }
+
+    return render(request, 'authentication/profile.html', context)
+
+
 
 
 @login_required
