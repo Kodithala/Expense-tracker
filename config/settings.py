@@ -67,31 +67,73 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Database configuration (MySQL primary with fallback options)
-USE_SQLITE = os.environ.get('USE_SQLITE', 'False').lower() in ['true', '1', 'yes']
+# Database configuration (MySQL with resilient fallback for local and cloud environments)
+USE_SQLITE_ENV = os.environ.get('USE_SQLITE', 'False').lower() in ['true', '1', 'yes']
+database_url = os.environ.get('DATABASE_URL', '').strip()
+db_host = os.environ.get('DB_HOST', '127.0.0.1')
+db_port = os.environ.get('DB_PORT', '3306')
+db_user = os.environ.get('DB_USER', 'root')
+db_pass = os.environ.get('DB_PASSWORD', '')
+db_name = os.environ.get('DB_NAME', 'expense_tracker')
 
-if USE_SQLITE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+def is_mysql_reachable(host, port, user, password):
+    try:
+        import pymysql
+        conn = pymysql.connect(
+            host=host,
+            port=int(port),
+            user=user,
+            password=password,
+            connect_timeout=2
+        )
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+use_mysql = False
+
+if not USE_SQLITE_ENV:
+    if database_url:
+        from urllib.parse import urlparse
+        parsed = urlparse(database_url)
+        if 'mysql' in parsed.scheme:
+            use_mysql = True
+            db_user = parsed.username or db_user
+            db_pass = parsed.password or db_pass
+            db_host = parsed.hostname or db_host
+            db_port = str(parsed.port or 3306)
+            db_name = parsed.path.lstrip('/') or db_name
+    elif db_host not in ['127.0.0.1', 'localhost']:
+        # External cloud MySQL host specified explicitly via DB_HOST environment variable
+        use_mysql = True
+    else:
+        # Local MySQL on 127.0.0.1 - test connectivity to prevent build failure on cloud containers
+        use_mysql = is_mysql_reachable(db_host, db_port, db_user, db_pass)
+
+if use_mysql:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('DB_NAME', 'expense_tracker'),
-            'USER': os.environ.get('DB_USER', 'root'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('DB_PORT', '3306'),
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_pass,
+            'HOST': db_host,
+            'PORT': db_port,
             'OPTIONS': {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
                 'charset': 'utf8mb4',
             }
         }
     }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 
 
 # Password validation
